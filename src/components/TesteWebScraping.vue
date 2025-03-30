@@ -14,8 +14,8 @@
       </button>
     </div>
 
-    <div v-if="error" class="error-message">
-      {{ error }}
+    <div v-if="errorMessage" class="error-message">
+      {{ errorMessage }}
     </div>
 
     <div v-if="displayTerm" class="term-display">
@@ -27,14 +27,28 @@
       <div>
         <label
           v-for="(translation, index) in translations"
-          :for="translation"
+          :for="translation.index"
           :key="'trans-' + index"
+          :class="{ 'selected-item': selectedTranslations.includes(translation) }"
         >
-          <input type="checkbox" :name="translation" :id="translation">
+          <input 
+            type="checkbox"
+            :checked="selectedTranslations.includes(translation)"
+            :id="translation.index"
+            :name="translation" 
+            :value="translation"
+            v-model="selectedTranslations"
+          >
           <span>{{ translation }}</span>
         </label>
 
-        <button @click="copyTranslations">copy</button>
+        <button
+         @click="copyTranslations" 
+         class="btn-copy"
+         :class="{ 'copyDisable': !selectedTranslations.length }" 
+        >
+         <img src="../assets/icons/icon-copy.svg" alt="">
+        </button>
       </div>
     </div>
 
@@ -46,7 +60,9 @@
           v-for="(example, index) in examples"
           :key="index"
         >
-          <p>{{ example.original }}</p>
+          <button @click="copyExemple(example.original)" title="Clique para copiar">
+            {{ example.original }}
+          </button>
           <p>{{ example.translation }}</p>
         </li>
       </ul>
@@ -57,6 +73,9 @@
 <script setup>
 import { ref, watch } from "vue";
 import axios from "axios";
+import { useToast } from "vue-toastification";
+
+const toast = useToast()
 
 const wordToLearn = ref("");
 const word = ref("");
@@ -64,25 +83,38 @@ const examples = ref([]);
 const translations = ref([]);
 const displayTerm = ref("");
 const isLoading = ref(false);
-const error = ref(null);
+const errorMessage = ref(null);
 const lastSearchedWord = ref("");
 
+const selectedTranslations = ref([])
+const copied = ref(false)
+
+const formatTranslations = (translationsArray) => {
+  return translationsArray
+    .map(t => t.trim())
+    .join(', ')
+}
+
 const getExamples = async () => {
-  if (wordToLearn.value.toLowerCase() === lastSearchedWord.value.toLowerCase()) {
-    error.value = "Você já está buscando essa palavra";
+  if (!wordToLearn.value.trim()) {
+    errorMessage.value = "Por favor, digite uma palavra";
     return;
   }
 
-  if (!wordToLearn.value.trim()) {
-    error.value = "Por favor, digite uma palavra";
+  if (wordToLearn.value !== '' && wordToLearn.value.toLowerCase() === lastSearchedWord.value.toLowerCase()) {
+    errorMessage.value = "Você já está buscando essa palavra";
     return;
   }
+
+  setTimeout(() => {
+    errorMessage.value = null;
+  }, 2500);
 
   word.value = "";
   examples.value = [];
   translations.value = [];
   displayTerm.value = "";
-  error.value = null;
+  errorMessage.value = null;
   isLoading.value = true;
 
   try {
@@ -98,19 +130,48 @@ const getExamples = async () => {
     lastSearchedWord.value = wordToLearn.value.toLowerCase();
   } catch (err) {
     console.error("Erro ao buscar exemplos:", err);
-    error.value = "Erro ao buscar exemplos. Tente novamente mais tarde.";
+    errorMessage.value = "Erro ao buscar exemplos. Tente novamente mais tarde.";
   } finally {
     isLoading.value = false;
   }
 };
 
-const copyTranslations = () => {
-  
+setTimeout(() => {
+  errorMessage.value = null;
+}, 2500);
+
+const copyTranslations = async () => {
+  if (!selectedTranslations.value.length) {
+    toast.error('Selecione pelo menos 1 opção')
+    return
+  }
+
+  try {    
+    await navigator.clipboard.writeText(formatTranslations(selectedTranslations.value))
+    copied.value = true
+    setTimeout(() => copied.value = false, 2000)
+
+    toast.success(`Copiado \n ${formatTranslations(selectedTranslations.value)}`)
+    selectedTranslations.value = []
+  } catch (err) {
+    console.error('Falha ao copiar: ', err)
+  }
+}
+
+const copyExemple = (exempleToCopy) => {
+  try {
+    console.log(exempleToCopy);
+    
+    navigator.clipboard.writeText(exempleToCopy)
+    toast.success(`Frase copiada \n ${exempleToCopy}`)
+  } catch (err) {
+    console.error('Falha ao copiar a frase: ', err)
+  }
 }
 
 watch(wordToLearn, (newVal) => {
   if (newVal.toLowerCase() !== lastSearchedWord.value.toLowerCase()) {
-    error.value = null;
+    errorMessage.value = null;
   }
 });
 </script>
@@ -124,6 +185,18 @@ watch(wordToLearn, (newVal) => {
   display: flex;
   gap: 10px;
   margin-bottom: 20px;
+}
+.btn-copy {
+  height: 40px;
+  width: fit-content;
+  padding: 9px;
+}
+.btn-copy img {
+  width: 100%;
+  height: 100%;
+}
+.btn-copy:hover {
+  background-color: #2fac74;
 }
 input {
   flex: 1;
@@ -153,12 +226,16 @@ button:disabled {
   margin-top: 20px;
 }
 .results ul {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 0;
 }
 .results li {
   display: flex;
   gap: 20px;
 }
+.results li button,
 .results li p {
   text-align: left;
   width: 50%;
@@ -184,21 +261,45 @@ h2 {
   list-style-type: none;
   padding: 0;
 }
+.translations .selected-item {
+  background-color: #e9ffef;
+  border-left: 4px solid #2cf321;
+}
+.translations label:hover {
+  background-color: #e9ffef;
+  border-left: 4px solid #2cf321;
+}
 .translations label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 6px 8px;
-  margin: 5px 0;
+  margin: 0;
   border-radius: 4px;
   color: #000;
-  background-color: #e9f5ff;
-  border-left: 4px solid #2196f3;
+  background-color: #ececec;
+  border-left: 4px solid #787878;
+  transition: 150ms all ease-in-out;
+  min-width: 60px;
   line-height: 1.25;
   user-select: none
 }
 .translations label:hover {
   cursor: pointer;
 }
+.translations label input {
+  display: none;
+}
 .term-display h2 {
   color: #ffffff;
   margin-bottom: 15px;
+}
+
+.copyDisable {
+  background-color: gray;
+  cursor: not-allowed;
+}
+.copyDisable:hover {
+  background-color: #a3a3a3 !important;
 }
 </style>
