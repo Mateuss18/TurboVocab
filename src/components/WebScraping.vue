@@ -5,7 +5,7 @@
     <div class="search-box">
       <input
         v-model.trim="wordToLearn"
-        placeholder="Digite uma palavra em inglês"
+        placeholder="Digite uma palavra em inglês a ser aprendida aqui"
         @keyup.enter="getExamples" />
       <button
         @click="getExamples"
@@ -23,7 +23,7 @@
     </div>
 
     <div v-if="translations.length" class="translations">
-      <h3>Traduções:</h3>
+      <h3>Possiveis traduções:</h3>
       <div>
         <label
           v-for="(translation, index) in translations"
@@ -53,7 +53,7 @@
     </div>
 
     <div v-if="examples.length" class="results">
-      <h2>Exemplos para "{{ word }}"</h2>
+      <h3>Frases de exemplo:</h3>
 
       <ul>
         <li
@@ -76,7 +76,6 @@ import axios from "axios";
 import { useToast } from "vue-toastification";
 
 const toast = useToast()
-
 const wordToLearn = ref("");
 const word = ref("");
 const examples = ref([]);
@@ -85,7 +84,6 @@ const displayTerm = ref("");
 const isLoading = ref(false);
 const errorMessage = ref(null);
 const lastSearchedWord = ref("");
-
 const selectedTranslations = ref([])
 const copied = ref(false)
 
@@ -125,7 +123,7 @@ const getExamples = async () => {
     word.value = data.word
     examples.value = data.examples;
     translations.value = data.translations;
-    displayTerm.value = data.displayTerm;
+    displayTerm.value = data.word;
 
     lastSearchedWord.value = wordToLearn.value.toLowerCase();
   } catch (err) {
@@ -142,7 +140,7 @@ setTimeout(() => {
 
 const copyTranslations = async () => {
   if (!selectedTranslations.value.length) {
-    toast.error('Selecione pelo menos 1 opção')
+    toast.error('Selecione pelo menos 1 palavra')
     return
   }
 
@@ -160,8 +158,6 @@ const copyTranslations = async () => {
 
 const copyExemple = (exempleToCopy) => {
   try {
-    console.log(exempleToCopy);
-    
     navigator.clipboard.writeText(exempleToCopy)
     toast.success(`Frase copiada \n ${exempleToCopy}`)
   } catch (err) {
@@ -180,6 +176,11 @@ watch(wordToLearn, (newVal) => {
 .container {
   margin: 0 auto;
   font-family: Arial, sans-serif;
+}
+h1 {
+  font-size: 44px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 .search-box {
   display: flex;
@@ -207,8 +208,8 @@ input {
 }
 button {
   padding: 10px 20px;
-  background-color: #42b983;
-  color: white;
+  background-color: #168e58;
+  color: #FFF;
   border: none;
   border-radius: 4px;
   cursor: pointer;

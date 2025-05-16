@@ -1,10 +1,9 @@
 <template>
-  <TesteAI/>
+  <WebScraping />
 </template>
 
 <script setup>
-// import MainContent from './components/MainContent.vue';
-import TesteAI from './components/TesteWebScraping.vue';
+import WebScraping from './components/WebScraping.vue';
 </script>
 
 <style scoped>
